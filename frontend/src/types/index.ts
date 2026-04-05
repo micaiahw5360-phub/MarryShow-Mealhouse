@@ -23,7 +23,7 @@ export interface Category {
 }
 
 export interface CartItem {
-  id: number;          // menu item id
+  id: number;
   name: string;
   price: number;
   quantity: number;
