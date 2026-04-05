@@ -9,7 +9,7 @@ export default function MainLayout() {
         <Outlet />
       </main>
       <footer className="bg-white border-t py-6 text-center text-gray-500 text-sm">
-        &copy; {new Date().getFullYear()} MarryShow Mealhouse – University Cafe System
+        &copy; MarryShow Mealhouse
       </footer>
     </div>
   );
