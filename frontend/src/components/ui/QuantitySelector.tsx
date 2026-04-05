@@ -1,4 +1,4 @@
-import Button from './Button';
+import button from './button';
 
 interface QuantitySelectorProps {
   quantity: number;

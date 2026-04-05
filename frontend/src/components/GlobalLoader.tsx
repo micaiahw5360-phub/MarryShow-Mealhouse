@@ -1,5 +1,5 @@
 import { useIsFetching, useIsMutating } from '@tanstack/react-query';
-import Spinner from './ui/Spinner';
+import Spinner from './ui/spinner';
 
 export default function GlobalLoader() {
   const isFetching = useIsFetching();

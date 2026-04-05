@@ -1,10 +1,10 @@
 <?php
 class Database {
+    private $conn;  // <-- added missing property
     private $host = "localhost";
-    private $db_name = "university_cafe";
+    private $db_name = "tamcc_deli_react";
     private $username = "root";
-    private $password = "";
-    public $conn;
+    private $password = "";   // your MySQL root password
 
     public function getConnection() {
         $this->conn = null;
@@ -19,3 +19,4 @@ class Database {
         return $this->conn;
     }
 }
+?>
