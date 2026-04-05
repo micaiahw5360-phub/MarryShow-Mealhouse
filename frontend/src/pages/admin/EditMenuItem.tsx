@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../components/ui/select';
-import { menuItems } from '../../data/menuData';
+import { adminService, itemsService } from '../../services/api';
 import { toast } from 'sonner';
 
 const categories = ['Breakfast', 'A La Carte', 'Combo', 'Beverage', 'Dessert'];
@@ -21,6 +21,7 @@ const categories = ['Breakfast', 'A La Carte', 'Combo', 'Beverage', 'Dessert'];
 export function EditMenuItem() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     category: '',
@@ -30,22 +31,28 @@ export function EditMenuItem() {
   });
 
   useEffect(() => {
-    const item = menuItems.find((item) => item.id === id);
-    if (item) {
-      setFormData({
-        name: item.name,
-        category: item.category,
-        price: item.price.toString(),
-        image: item.image,
-        description: item.description,
+    if (id) {
+      itemsService.getItem(parseInt(id)).then(item => {
+        if (item) {
+          setFormData({
+            name: item.name,
+            category: item.category,
+            price: item.price.toString(),
+            image: item.image || '',
+            description: item.description || '',
+          });
+        } else {
+          toast.error('Menu item not found');
+          navigate('/admin/menu');
+        }
+      }).catch(() => {
+        toast.error('Failed to load item');
+        navigate('/admin/menu');
       });
-    } else {
-      toast.error('Menu item not found');
-      navigate('/admin/menu');
     }
   }, [id, navigate]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!formData.name || !formData.category || !formData.price) {
@@ -53,9 +60,22 @@ export function EditMenuItem() {
       return;
     }
 
-    // In a real app, this would update the database
-    toast.success('Menu item updated successfully!');
-    navigate('/admin/menu');
+    setLoading(true);
+    try {
+      await adminService.updateItem(parseInt(id!), {
+        name: formData.name,
+        category: formData.category,
+        price: parseFloat(formData.price),
+        image: formData.image || undefined,
+        description: formData.description,
+      });
+      toast.success('Menu item updated successfully!');
+      navigate('/admin/menu');
+    } catch (error) {
+      toast.error('Failed to update menu item');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -157,8 +177,8 @@ export function EditMenuItem() {
             </div>
 
             <div className="flex space-x-4">
-              <Button type="submit" className="bg-[#074af2] hover:bg-[#0639c0]">
-                Update Menu Item
+              <Button type="submit" className="bg-[#074af2] hover:bg-[#0639c0]" disabled={loading}>
+                {loading ? 'Updating...' : 'Update Menu Item'}
               </Button>
               <Button type="button" variant="outline" onClick={() => navigate('/admin/menu')}>
                 Cancel

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router';
 import { Plus, Edit, Trash2, Settings } from 'lucide-react';
 import { Button } from '../../components/ui/button';
@@ -11,18 +11,41 @@ import {
   TableHeader,
   TableRow,
 } from '../../components/ui/table';
-import { menuItems } from '../../data/menuData';
+import { adminService } from '../../services/api';
 import { toast } from 'sonner';
 
 export function ManageMenu() {
-  const [items, setItems] = useState(menuItems);
+  const [items, setItems] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const handleDelete = (id: string) => {
-    if (confirm('Are you sure you want to delete this menu item?')) {
-      setItems(items.filter((item) => item.id !== id));
-      toast.success('Menu item deleted successfully');
+  const loadItems = async () => {
+    try {
+      const data = await adminService.getAllItems();
+      setItems(data);
+    } catch (error) {
+      toast.error('Failed to load menu items');
+    } finally {
+      setLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadItems();
+  }, []);
+
+  const handleDelete = async (id: number) => {
+    if (confirm('Are you sure you want to delete this menu item?')) {
+      try {
+        await adminService.deleteItem(id);
+        toast.success('Menu item deleted successfully');
+        loadItems(); // refresh list
+      } catch (error) {
+        toast.error('Delete failed');
+      }
+    }
+  };
+
+  if (loading) return <div className="text-center py-20">Loading menu items...</div>;
 
   return (
     <div className="space-y-6">
@@ -63,7 +86,7 @@ export function ManageMenu() {
                     <TableCell className="font-medium">#{index + 1}</TableCell>
                     <TableCell>
                       <img
-                        src={item.image}
+                        src={item.image || '/placeholder.jpg'}
                         alt={item.name}
                         className="w-16 h-16 object-cover rounded"
                       />
@@ -71,9 +94,7 @@ export function ManageMenu() {
                     <TableCell>
                       <div>
                         <p className="font-medium">{item.name}</p>
-                        <p className="text-sm text-gray-500 line-clamp-1">
-                          {item.description}
-                        </p>
+                        <p className="text-sm text-gray-500 line-clamp-1">{item.description}</p>
                       </div>
                     </TableCell>
                     <TableCell>

@@ -13,12 +13,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../components/ui/select';
+import { adminService } from '../../services/api';
 import { toast } from 'sonner';
 
 const categories = ['Breakfast', 'A La Carte', 'Combo', 'Beverage', 'Dessert'];
 
 export function AddMenuItem() {
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     category: '',
@@ -27,7 +29,7 @@ export function AddMenuItem() {
     description: '',
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!formData.name || !formData.category || !formData.price) {
@@ -35,9 +37,22 @@ export function AddMenuItem() {
       return;
     }
 
-    // In a real app, this would save to a database
-    toast.success('Menu item added successfully!');
-    navigate('/admin/menu');
+    setLoading(true);
+    try {
+      await adminService.createItem({
+        name: formData.name,
+        category: formData.category,
+        price: parseFloat(formData.price),
+        image: formData.image || undefined,
+        description: formData.description,
+      });
+      toast.success('Menu item added successfully!');
+      navigate('/admin/menu');
+    } catch (error) {
+      toast.error('Failed to add menu item');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -133,8 +148,8 @@ export function AddMenuItem() {
             </div>
 
             <div className="flex space-x-4">
-              <Button type="submit" className="bg-[#074af2] hover:bg-[#0639c0]">
-                Add Menu Item
+              <Button type="submit" className="bg-[#074af2] hover:bg-[#0639c0]" disabled={loading}>
+                {loading ? 'Adding...' : 'Add Menu Item'}
               </Button>
               <Button type="button" variant="outline" onClick={() => navigate('/admin/menu')}>
                 Cancel

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Edit, UserX, UserCheck } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
@@ -10,38 +10,46 @@ import {
   TableHeader,
   TableRow,
 } from '../../components/ui/table';
+import { adminService } from '../../services/api';
 import { toast } from 'sonner';
 
-const mockUsers = [
-  { id: '1', username: 'Admin', email: 'admin@tamcc.edu', role: 'admin', walletBalance: 0, active: true },
-  { id: '2', username: 'johndoe', email: 'john@tamcc.edu', role: 'customer', walletBalance: 25.50, active: true },
-  { id: '3', username: 'mariagarcia', email: 'maria@tamcc.edu', role: 'customer', walletBalance: 12.75, active: true },
-  { id: '4', username: 'davidchen', email: 'david@tamcc.edu', role: 'customer', walletBalance: 40.00, active: true },
-  { id: '5', username: 'sarahjohnson', email: 'sarah@tamcc.edu', role: 'customer', walletBalance: 8.25, active: false },
-  { id: '6', username: 'michaelbrown', email: 'michael@tamcc.edu', role: 'customer', walletBalance: 15.00, active: true },
-  { id: '7', username: 'emilydavis', email: 'emily@tamcc.edu', role: 'customer', walletBalance: 0, active: true },
-  { id: '8', username: 'jameswilson', email: 'james@tamcc.edu', role: 'customer', walletBalance: 50.00, active: true },
-];
-
 export function ManageUsers() {
-  const [users, setUsers] = useState(mockUsers);
+  const [users, setUsers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const handleToggleActive = (userId: string) => {
-    setUsers(
-      users.map((user) =>
-        user.id === userId ? { ...user, active: !user.active } : user
-      )
-    );
-    const user = users.find((u) => u.id === userId);
-    toast.success(`User ${user?.active ? 'deactivated' : 'activated'} successfully`);
+  const loadUsers = async () => {
+    try {
+      const data = await adminService.getAllUsers();
+      setUsers(data);
+    } catch (error) {
+      toast.error('Failed to load users');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadUsers();
+  }, []);
+
+  const handleToggleActive = async (userId: string, currentActive: boolean) => {
+    try {
+      await adminService.toggleUserActive(userId);
+      toast.success(`User ${currentActive ? 'deactivated' : 'activated'} successfully`);
+      loadUsers(); // refresh
+    } catch (error) {
+      toast.error('Action failed');
+    }
   };
 
   const stats = {
     total: users.length,
-    admins: users.filter((u) => u.role === 'admin').length,
-    customers: users.filter((u) => u.role === 'customer').length,
-    active: users.filter((u) => u.active).length,
+    admins: users.filter(u => u.role === 'admin').length,
+    customers: users.filter(u => u.role === 'customer').length,
+    active: users.filter(u => u.active).length,
   };
+
+  if (loading) return <div className="text-center py-20">Loading users...</div>;
 
   return (
     <div className="space-y-6">
@@ -52,30 +60,10 @@ export function ManageUsers() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="pt-6">
-            <p className="text-sm text-gray-600">Total Users</p>
-            <p className="text-2xl font-bold mt-1">{stats.total}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <p className="text-sm text-gray-600">Admins</p>
-            <p className="text-2xl font-bold mt-1 text-blue-600">{stats.admins}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <p className="text-sm text-gray-600">Customers</p>
-            <p className="text-2xl font-bold mt-1 text-green-600">{stats.customers}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <p className="text-sm text-gray-600">Active</p>
-            <p className="text-2xl font-bold mt-1">{stats.active}</p>
-          </CardContent>
-        </Card>
+        <Card><CardContent className="pt-6"><p className="text-sm text-gray-600">Total Users</p><p className="text-2xl font-bold mt-1">{stats.total}</p></CardContent></Card>
+        <Card><CardContent className="pt-6"><p className="text-sm text-gray-600">Admins</p><p className="text-2xl font-bold mt-1 text-blue-600">{stats.admins}</p></CardContent></Card>
+        <Card><CardContent className="pt-6"><p className="text-sm text-gray-600">Customers</p><p className="text-2xl font-bold mt-1 text-green-600">{stats.customers}</p></CardContent></Card>
+        <Card><CardContent className="pt-6"><p className="text-sm text-gray-600">Active</p><p className="text-2xl font-bold mt-1">{stats.active}</p></CardContent></Card>
       </div>
 
       {/* Users Table */}
@@ -104,51 +92,31 @@ export function ManageUsers() {
                     <TableCell>{user.username}</TableCell>
                     <TableCell className="text-sm text-gray-600">{user.email}</TableCell>
                     <TableCell>
-                      <span
-                        className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium capitalize ${
-                          user.role === 'admin'
-                            ? 'bg-purple-100 text-purple-800'
-                            : 'bg-blue-100 text-blue-800'
-                        }`}
-                      >
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium capitalize ${user.role === 'admin' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'}`}>
                         {user.role}
                       </span>
                     </TableCell>
-                    <TableCell className="font-medium">
-                      ${user.walletBalance.toFixed(2)}
-                    </TableCell>
+                    <TableCell className="font-medium">${user.walletBalance.toFixed(2)}</TableCell>
                     <TableCell>
-                      <span
-                        className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                          user.active
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-red-100 text-red-800'
-                        }`}
-                      >
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${user.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                         {user.active ? 'Active' : 'Inactive'}
                       </span>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center justify-end space-x-2">
-                        <Button size="sm" variant="ghost" title="Edit">
+                        <Button size="sm" variant="ghost" title="Edit" onClick={() => window.location.href = `/admin/users/edit/${user.id}`}>
                           <Edit className="w-4 h-4" />
                         </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleToggleActive(user.id)}
-                          title={user.active ? 'Deactivate' : 'Activate'}
-                        >
-                          {user.active ? (
-                            <UserX className="w-4 h-4 text-red-500" />
-                          ) : (
-                            <UserCheck className="w-4 h-4 text-green-500" />
-                          )}
+                        <Button size="sm" variant="ghost" onClick={() => handleToggleActive(user.id, user.active)} title={user.active ? 'Deactivate' : 'Activate'}>
+                          {user.active ? <UserX className="w-4 h-4 text-red-500" /> : <UserCheck className="w-4 h-4 text-green-500" />}
                         </Button>
                       </div>
                     </TableCell>
                   </TableRow>
                 ))}
+                {users.length === 0 && (
+                  <TableRow><TableCell colSpan={7} className="text-center py-12 text-gray-500">No users found</TableCell></TableRow>
+                )}
               </TableBody>
             </Table>
           </div>

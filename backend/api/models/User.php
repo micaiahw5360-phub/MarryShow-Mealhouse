@@ -88,5 +88,12 @@ class User {
         $stmt->execute();
         return $stmt->fetchColumn();
     }
+
+    public function countAll() {
+        $query = "SELECT COUNT(*) FROM {$this->table}";
+        $stmt = $this->conn->prepare($query);
+        $stmt->execute();
+        return (int)$stmt->fetchColumn();
+    }
 }
 ?>

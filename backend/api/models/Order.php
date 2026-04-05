@@ -47,5 +47,20 @@ class Order {
         $stmt->bindParam(':id', $id);
         return $stmt->execute();
     }
+
+    public function countAll() {
+        $query = "SELECT COUNT(*) FROM {$this->table}";
+        $stmt = $this->conn->prepare($query);
+        $stmt->execute();
+        return (int)$stmt->fetchColumn();
+    }
+
+    public function countByStatus($status) {
+        $query = "SELECT COUNT(*) FROM {$this->table} WHERE status = :status";
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':status', $status);
+        $stmt->execute();
+        return (int)$stmt->fetchColumn();
+    }
 }
 ?>

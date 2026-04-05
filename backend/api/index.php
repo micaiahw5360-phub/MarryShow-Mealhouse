@@ -9,7 +9,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit();
 }
 
-// Use __DIR__ to always include from the correct folder
 require_once __DIR__ . '/config/db.php';
 require_once __DIR__ . '/utils/Response.php';
 require_once __DIR__ . '/utils/Security.php';
@@ -21,12 +20,12 @@ require_once __DIR__ . '/controllers/WalletController.php';
 require_once __DIR__ . '/controllers/FavoritesController.php';
 require_once __DIR__ . '/controllers/NotificationsController.php';
 require_once __DIR__ . '/controllers/ProfileController.php';
+require_once __DIR__ . '/controllers/AdminController.php';
 
-// Extract the API endpoint by removing everything before and including '/api'
 $requestUri = $_SERVER['REQUEST_URI'];
 $apiPos = strpos($requestUri, '/api');
 if ($apiPos !== false) {
-    $endpoint = substr($requestUri, $apiPos + 4); // +4 to skip '/api'
+    $endpoint = substr($requestUri, $apiPos + 4);
 } else {
     $endpoint = $requestUri;
 }
@@ -34,12 +33,10 @@ $endpoint = trim($endpoint, '/');
 $path = explode('/', $endpoint);
 $requestMethod = $_SERVER['REQUEST_METHOD'];
 
-// If no endpoint (empty path), return API running message
 if (empty($path[0])) {
     Response::send(200, ['message' => 'API is running']);
 }
 
-// Route to appropriate controller
 switch ($path[0]) {
     case 'login':
         $controller = new AuthController();
@@ -116,6 +113,76 @@ switch ($path[0]) {
                 $controller->changePassword();
             } else {
                 $controller->put();
+            }
+        } else {
+            Response::send(405, ['error' => 'Method not allowed']);
+        }
+        break;
+    case 'admin':
+        $adminController = new AdminController();
+        if ($requestMethod === 'GET') {
+            if (!isset($path[1])) {
+                Response::send(400, ['error' => 'Missing admin endpoint']);
+            }
+            switch ($path[1]) {
+                case 'stats':
+                    $adminController->getStats();
+                    break;
+                case 'sales-weekly':
+                    $adminController->getWeeklySales();
+                    break;
+                case 'popular-items':
+                    $adminController->getPopularItems();
+                    break;
+                case 'recent-orders':
+                    $adminController->getRecentOrders();
+                    break;
+                case 'orders':
+                    $adminController->getAllOrders();
+                    break;
+                case 'users':
+                    $adminController->getAllUsers();
+                    break;
+                case 'items':
+                    $adminController->getAllItems();
+                    break;
+                case 'items/options':
+                    if (isset($path[2]) && is_numeric($path[2])) {
+                        $adminController->getOptions((int)$path[2]);
+                    } else {
+                        Response::send(400, ['error' => 'Item ID required']);
+                    }
+                    break;
+                default:
+                    Response::send(404, ['error' => 'Admin endpoint not found']);
+            }
+        } elseif ($requestMethod === 'POST') {
+            if ($path[1] === 'items') {
+                $adminController->createItem();
+            } elseif ($path[1] === 'items' && isset($path[2]) && $path[2] === 'options' && isset($path[3]) && is_numeric($path[3])) {
+                $adminController->addOption((int)$path[3]);
+            } else {
+                Response::send(404, ['error' => 'Admin POST endpoint not found']);
+            }
+        } elseif ($requestMethod === 'PUT') {
+            if ($path[1] === 'orders' && isset($path[3]) && $path[3] === 'status') {
+                $adminController->updateOrderStatus($path[2]);
+            } elseif ($path[1] === 'users' && isset($path[3]) && $path[3] === 'toggle-active') {
+                $adminController->toggleUserActive($path[2]);
+            } elseif ($path[1] === 'items' && isset($path[2]) && is_numeric($path[2])) {
+                $adminController->updateItem((int)$path[2]);
+            } elseif ($path[1] === 'options' && isset($path[2]) && is_numeric($path[2])) {
+                $adminController->updateOption((int)$path[2]);
+            } else {
+                Response::send(404, ['error' => 'Admin PUT endpoint not found']);
+            }
+        } elseif ($requestMethod === 'DELETE') {
+            if ($path[1] === 'items' && isset($path[2]) && is_numeric($path[2])) {
+                $adminController->deleteItem((int)$path[2]);
+            } elseif ($path[1] === 'options' && isset($path[2]) && is_numeric($path[2])) {
+                $adminController->deleteOption((int)$path[2]);
+            } else {
+                Response::send(404, ['error' => 'Admin DELETE endpoint not found']);
             }
         } else {
             Response::send(405, ['error' => 'Method not allowed']);

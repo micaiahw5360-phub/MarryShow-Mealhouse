@@ -6,13 +6,15 @@ import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
-import { menuItems } from '../../data/menuData';
+import { adminService, itemsService } from '../../services/api';
 import { toast } from 'sonner';
 
 export function ManageItemOptions() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [item, setItem] = useState(menuItems.find((item) => item.id === id));
+  const [item, setItem] = useState<any>(null);
+  const [options, setOptions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [showDialog, setShowDialog] = useState(false);
   const [optionForm, setOptionForm] = useState({
     name: '',
@@ -20,13 +22,21 @@ export function ManageItemOptions() {
   });
 
   useEffect(() => {
-    const foundItem = menuItems.find((item) => item.id === id);
-    if (!foundItem) {
-      toast.error('Menu item not found');
-      navigate('/admin/menu');
-    } else {
-      setItem(foundItem);
-    }
+    const loadData = async () => {
+      if (!id) return;
+      try {
+        const itemData = await itemsService.getItem(parseInt(id));
+        setItem(itemData);
+        const opts = await adminService.getOptions(parseInt(id));
+        setOptions(opts);
+      } catch (error) {
+        toast.error('Failed to load options');
+        navigate('/admin/menu');
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadData();
   }, [id, navigate]);
 
   const handleAddValue = () => {
@@ -47,7 +57,7 @@ export function ManageItemOptions() {
     setOptionForm({ ...optionForm, values: newValues });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!optionForm.name) {
@@ -60,14 +70,26 @@ export function ManageItemOptions() {
       return;
     }
 
-    toast.success('Option added successfully!');
-    setShowDialog(false);
-    setOptionForm({
-      name: '',
-      values: [{ name: '', priceModifier: 0 }],
-    });
+    try {
+      await adminService.addOption(parseInt(id!), {
+        name: optionForm.name,
+        values: optionForm.values,
+      });
+      toast.success('Option added successfully!');
+      // Refresh options
+      const opts = await adminService.getOptions(parseInt(id!));
+      setOptions(opts);
+      setShowDialog(false);
+      setOptionForm({
+        name: '',
+        values: [{ name: '', priceModifier: 0 }],
+      });
+    } catch (error) {
+      toast.error('Failed to add option');
+    }
   };
 
+  if (loading) return <div className="text-center py-20">Loading options...</div>;
   if (!item) return null;
 
   return (
@@ -92,9 +114,9 @@ export function ManageItemOptions() {
           </div>
         </CardHeader>
         <CardContent>
-          {item.options && item.options.length > 0 ? (
+          {options.length > 0 ? (
             <div className="space-y-6">
-              {item.options.map((option) => (
+              {options.map((option) => (
                 <Card key={option.id} className="border-2">
                   <CardContent className="pt-6">
                     <div className="flex items-center justify-between mb-4">
@@ -109,7 +131,7 @@ export function ManageItemOptions() {
                       </div>
                     </div>
                     <div className="space-y-2">
-                      {option.values.map((value) => (
+                      {option.values.map((value: any) => (
                         <div
                           key={value.id}
                           className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
