@@ -2,36 +2,28 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCartStore } from '../context/cartStore';
 import { useAuthStore } from '../context/authStore';
+import { useCreateOrder } from '../hooks/useOrder';
 import Button from '../components/ui/Button';
 import Card, { CardBody, CardHeader, CardFooter } from '../components/ui/Card';
 import Modal from '../components/ui/Modal';
 import toast from 'react-hot-toast';
 
 export default function PaymentPage() {
-  const { items, totalPrice, clearCart } = useCartStore();
-  const { user, token } = useAuthStore();
+  const { items, totalPrice } = useCartStore();
+  const { user } = useAuthStore();
   const navigate = useNavigate();
-  const [isProcessing, setIsProcessing] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const createOrderMutation = useCreateOrder();
 
   const totalWithTax = totalPrice * 1.1;
   const hasSufficientBalance = user ? user.wallet_balance >= totalWithTax : false;
 
-  const handlePayment = async () => {
-    if (!hasSufficientBalance) {
-      toast.error('Insufficient wallet balance');
-      return;
-    }
-
-    setIsProcessing(true);
-    // TODO: Phase 6 - Replace with actual API call to /api/orders
-    setTimeout(() => {
-      const mockOrderId = Math.floor(Math.random() * 10000);
-      clearCart();
-      toast.success('Payment successful!');
-      navigate(`/confirmation/${mockOrderId}`);
-      setIsProcessing(false);
-    }, 1500);
+  const handlePayment = () => {
+    createOrderMutation.mutate(undefined, {
+      onSuccess: (data) => {
+        navigate(`/confirmation/${data.orderId}`);
+      },
+    });
   };
 
   if (items.length === 0) {
@@ -46,7 +38,7 @@ export default function PaymentPage() {
       <Card className="mb-6">
         <CardHeader>Order Summary</CardHeader>
         <CardBody>
-          {items.map(item => (
+          {items.map((item) => (
             <div key={item.id} className="flex justify-between py-2 border-b">
               <span>{item.name} x{item.quantity}</span>
               <span>${(item.price * item.quantity).toFixed(2)}</span>
@@ -83,8 +75,8 @@ export default function PaymentPage() {
         <CardFooter>
           <Button
             onClick={() => setShowConfirmModal(true)}
-            disabled={!hasSufficientBalance || isProcessing}
-            isLoading={isProcessing}
+            disabled={!hasSufficientBalance || createOrderMutation.isPending}
+            isLoading={createOrderMutation.isPending}
             fullWidth
           >
             Confirm Payment

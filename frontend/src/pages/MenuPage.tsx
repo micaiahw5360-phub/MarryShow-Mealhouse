@@ -1,42 +1,31 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useCartStore } from '../context/cartStore';
+import { useCategories, useItems } from '../hooks/useMenuData';
 import Button from '../components/ui/Button';
 import Card, { CardBody, CardFooter } from '../components/ui/Card';
 import Spinner from '../components/ui/Spinner';
 import toast from 'react-hot-toast';
-import type { MenuItem, Category } from '../types';
 
 export default function MenuPage() {
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [items, setItems] = useState<MenuItem[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
-  const [loading, setLoading] = useState(true);
   const addToCart = useCartStore((state) => state.addItem);
 
-  // Mock data - Phase 6 will replace with API call
-  useEffect(() => {
-    // Simulate API fetch
-    setTimeout(() => {
-      setCategories([
-        { id: 1, name: 'Burgers', sort_order: 1 },
-        { id: 2, name: 'Pizza', sort_order: 2 },
-        { id: 3, name: 'Salads', sort_order: 3 },
-      ]);
-      setItems([
-        { id: 1, name: 'Classic Burger', description: 'Beef patty, lettuce, tomato, cheese', price: 8.99, category_id: 1, image_url: null, is_available: true },
-        { id: 2, name: 'Cheeseburger', description: 'Double cheese, pickles, onions', price: 9.99, category_id: 1, image_url: null, is_available: true },
-        { id: 3, name: 'Margherita Pizza', description: 'Tomato, mozzarella, basil', price: 12.99, category_id: 2, image_url: null, is_available: true },
-        { id: 4, name: 'Caesar Salad', description: 'Romaine, croutons, parmesan, Caesar dressing', price: 7.99, category_id: 3, image_url: null, is_available: true },
-      ]);
-      setLoading(false);
-    }, 500);
-  }, []);
+  const { data: categories, isLoading: categoriesLoading } = useCategories();
+  const { data: items, isLoading: itemsLoading, error } = useItems(selectedCategory || undefined);
 
-  const filteredItems = selectedCategory
-    ? items.filter(item => item.category_id === selectedCategory)
-    : items;
+  if (categoriesLoading || itemsLoading) {
+    return (
+      <div className="flex justify-center py-20">
+        <Spinner size="lg" />
+      </div>
+    );
+  }
 
-  const handleAddToCart = (item: MenuItem) => {
+  if (error) {
+    return <div className="text-center text-red-500 py-20">Failed to load menu. Please try again later.</div>;
+  }
+
+  const handleAddToCart = (item: any) => {
     addToCart({
       id: item.id,
       name: item.name,
@@ -47,19 +36,10 @@ export default function MenuPage() {
     toast.success(`${item.name} added to cart`);
   };
 
-  if (loading) {
-    return (
-      <div className="flex justify-center py-20">
-        <Spinner size="lg" />
-      </div>
-    );
-  }
-
   return (
     <div>
       <h1 className="text-3xl font-bold mb-6">Our Menu</h1>
 
-      {/* Category Tabs */}
       <div className="flex flex-wrap gap-2 mb-8 border-b pb-4">
         <button
           onClick={() => setSelectedCategory(null)}
@@ -67,7 +47,7 @@ export default function MenuPage() {
         >
           All
         </button>
-        {categories.map(cat => (
+        {categories?.map((cat) => (
           <button
             key={cat.id}
             onClick={() => setSelectedCategory(cat.id)}
@@ -78,9 +58,8 @@ export default function MenuPage() {
         ))}
       </div>
 
-      {/* Items Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredItems.map(item => (
+        {items?.map((item) => (
           <Card key={item.id} className="flex flex-col">
             <div className="h-48 bg-gray-200 flex items-center justify-center">
               <span className="text-5xl">🍽️</span>

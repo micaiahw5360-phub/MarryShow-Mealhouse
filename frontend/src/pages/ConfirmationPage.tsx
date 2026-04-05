@@ -1,14 +1,29 @@
 import { useParams, Link } from 'react-router-dom';
+import { useOrder } from '../hooks/useOrder';
 import Button from '../components/ui/Button';
 import Card, { CardBody, CardHeader } from '../components/ui/Card';
+import Spinner from '../components/ui/Spinner';
 
 export default function ConfirmationPage() {
   const { orderId } = useParams();
+  const { data: order, isLoading, error } = useOrder(Number(orderId));
 
-  // Simulate email receipt (Phase 6 will implement real email)
   const handleEmailReceipt = () => {
-    alert(`Receipt for order #${orderId} would be emailed. (API integration in Phase 6)`);
+    // Will implement in Phase 6
+    alert(`Receipt for order #${orderId} would be emailed.`);
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center py-20">
+        <Spinner size="lg" />
+      </div>
+    );
+  }
+
+  if (error || !order) {
+    return <div className="text-center text-red-500 py-20">Order not found.</div>;
+  }
 
   return (
     <div className="max-w-md mx-auto text-center">
@@ -19,8 +34,9 @@ export default function ConfirmationPage() {
       <Card className="mb-6">
         <CardHeader>Order Details</CardHeader>
         <CardBody>
-          <p><strong>Order Number:</strong> #{orderId}</p>
-          <p><strong>Status:</strong> <span className="text-green-600">Completed</span></p>
+          <p><strong>Order Number:</strong> #{order.id}</p>
+          <p><strong>Status:</strong> <span className="text-green-600">{order.status}</span></p>
+          <p><strong>Total:</strong> ${order.total_amount.toFixed(2)}</p>
           <p><strong>Estimated Pickup:</strong> 15-20 minutes</p>
         </CardBody>
       </Card>
